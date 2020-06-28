@@ -1,3 +1,6 @@
+# Images
+*.jpg
+
 # History files
 .Rhistory
 .Rapp.history

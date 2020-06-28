@@ -1,0 +1,241 @@
+---
+title: "Batch Calibration Thermogram"
+output:
+  html_document:
+    df_print: paged
+---
+```{r setup}
+knitr::opts_knit$set(root.dir = normalizePath("/home/jitte"))
+print(getwd())
+```
+
+Load packages
+```{r}
+library("Thermimage")
+library("fields")
+library("imager")
+# library("magrittr")
+library("spatstat")
+library("exifr")
+
+```
+
+Set configurations
+
+```{r}
+## Noise filering
+NF = FALSE
+## Histogram Equalization
+HE = FALSE
+
+## INPUT_PATH_FOLDER
+input = "Data/"
+
+## OUTPUT_PATH_FOLDER
+output = "1_Nothing/"
+dir.create(file.path(output), showWarnings = FALSE)
+
+## Gassian sigma value for noise filtering
+sigma = 0.8
+
+## Situational parameters
+OD = 10
+RH = 53
+AtmosT = 28
+```
+
+Load path images from directory
+
+```{r}
+filenames <- list.files(input, pattern="*.JPG", full.names=FALSE)[34:36]
+filenames
+```
+
+Read image function
+
+```{r}
+# Load original thermal images, convert raw temperature values to estimates and save to output folder. Returns
+# values to retrieve the min/max temperature and the calculation of the histogram equalization.
+new.read_image <- function(image_file, 
+                           input_path="", output_path="Output/",
+                           NF=FALSE, 
+                           sigma=0.8,
+                           HE=FALSE,
+                           OD=NULL,
+                           RH=NULL,
+                           AtmosT=NULL) {
+  ## Create image path
+  image_path = paste(input_path, image_file, sep="")
+
+    ## Extract meta-tags from thermal image file ##
+  cams<-flirsettings(image_path, exiftool="installed", camvals="")
+
+  ## Set variables for calculation of temperature values from raw A/D sensor data
+  Emissivity<-cams$Info$Emissivity      # Image Saved Emissivity - should be ~0.95 or 0.96
+  ObjectEmissivity<-0.96                # Object Emissivity - should be ~0.95 or 0.96
+  dateOriginal<-cams$Dates$DateTimeOriginal
+  dateModif<-   cams$Dates$FileModificationDateTime
+  PlanckR1<-    cams$Info$PlanckR1                      # Planck R1 constant for camera
+  PlanckB<-     cams$Info$PlanckB                       # Planck B constant for camera
+  PlanckF<-     cams$Info$PlanckF                       # Planck F constant for camera
+  PlanckO<-     cams$Info$PlanckO                       # Planck O constant for camera
+  PlanckR2<-    cams$Info$PlanckR2                      # Planck R2 constant for camera
+  ATA1<-        cams$Info$AtmosphericTransAlpha1        # Atmospheric attenuation constant
+  ATA2<-        cams$Info$AtmosphericTransAlpha2        # Atmospheric attenuation constant
+  ATB1<-        cams$Info$AtmosphericTransBeta1         # Atmospheric attenuation constant
+  ATB2<-        cams$Info$AtmosphericTransBeta2         # Atmospheric attenuation constant
+  ATX<-         cams$Info$AtmosphericTransX             # Atmospheric attenuation constant
+  if (is.null(OD)) {
+    OD<-          cams$Info$ObjectDistance                # object distance in metres
+  }
+  FD<-          cams$Info$FocusDistance                 # focus distance in metres
+  ReflT<-       cams$Info$ReflectedApparentTemperature  # Reflected apparent temperature
+  if (is.null(AtmosT)) {
+    AtmosT<-      cams$Info$AtmosphericTemperature        # Atmospheric temperature
+  }
+  IRWinT<-      cams$Info$IRWindowTemperature           # IR Window Temperature
+  IRWinTran<-   cams$Info$IRWindowTransmission          # IR Window transparency
+  if (is.null(RH)) {
+    RH<-          cams$Info$RelativeHumidity              # Relative Humidity
+  }
+  h<-           cams$Info$RawThermalImageHeight         # sensor height (i.e. image height)
+  w<-           cams$Info$RawThermalImageWidth          # sensor width (i.e. image width)
+
+  ## Rotate image
+  temp_image = rotate270.matrix(readflirJPG(image_path))
+
+  ## Convert raw to temp data
+  temp_image = raw2temp(temp_image, ObjectEmissivity, OD, ReflT, AtmosT, IRWinT, IRWinTran, RH,
+                        PlanckR1, PlanckB, PlanckF, PlanckO, PlanckR2)
+  
+  ## Noise filtering with gauss filter
+  if (NF == TRUE) {
+    temp_image =  as.im(temp_image)
+    temp_image = blur(temp_image, sigma, bleed=FALSE)
+    temp_image =  as.matrix(temp_image)
+  }
+
+  
+  # hist(temp_image, main=paste("Histogram ", image_file))
+  ## Save temperature image
+  saveRDS(temp_image, file = paste(output_path, tools::file_path_sans_ext(image_file), ".RData", sep=""))
+
+  ## Return either min or max or every temperature value
+  if (HE == TRUE) {
+    temp_image
+  } else {
+    min <- min(temp_image)
+    max <- max(temp_image)
+    values <- c(min, max)
+  }
+}
+```
+
+Load images
+
+```{r}
+glob_temp_range <- unlist(lapply(filenames, new.read_image, 
+                                 input_path=input,
+                                 output_path=output,
+                                 NF=NF,
+                                 sigma=sigma,
+                                 HE=HE,
+                                 OD=OD,
+                                 RH=RH,
+                                 AtmosT=AtmosT))
+```
+
+Calculate global min and max values
+
+```{r}
+min_temp <- min(glob_temp_range)
+max_temp <- max(glob_temp_range)
+```
+
+Calculate ECDF for histogram equalization
+
+```{r}
+if (HE == TRUE) {
+  f <- ecdf(glob_temp_range)
+  hist(glob_temp_range, main=paste("Global Histogram"))
+  hist(f(glob_temp_range), main=paste("Global Equalized Histogram"))
+} else {
+  f <- NULL
+}
+```
+
+Normalize images (convert temperature values to gray values)
+
+```{r}
+new.normalize <- function(image_file, output_path="4_HE_NF/",
+                          min, max, 
+                          HE=FALSE, f_ecdf=NULL) {
+  ## Create image path
+  image_path = paste(output_path, tools::file_path_sans_ext(image_file), ".RData", sep="")
+  temp_image <- readRDS(image_path)
+  ## Delete .Rdata file
+  unlink(image_path)
+  
+  temp_image <- mirror.matrix(temp_image)
+
+  ## Normalize data/apply histogram equalization
+  if (HE == TRUE) {
+    equalized <- f_ecdf(temp_image)
+    equalized <- as.cimg(equalized, dim=dim(temp_image)) 
+    plot(equalized, rescale=FALSE, main=paste("Histogram equalized", image_file))
+    save.image(equalized, file=paste(output_path, image_file, sep=""), quality = 1)
+  } else {
+    temp_image <- (temp_image - min) / (max - min)
+    # hist(x=temp_image, main=paste("Histogram of normalized values", image_path), xlab='normalized value')
+
+    ## Plot and save temperature image
+    temp_image = as.cimg(temp_image, dim=dim(temp_image))
+    save.image(temp_image, file=paste(output_path, image_file, sep=""), quality = 1)
+    plot(temp_image, rescale=FALSE)
+  }
+}
+```
+
+Plot normalized images
+
+```{r}
+temp = lapply(filenames, new.normalize, 
+              output_path=output, 
+              min=min_temp, max=max_temp, 
+              HE=HE, 
+              f_ecdf=f)
+```
+
+```{r}
+# Create a copy metadata function with arguments.
+new.copy_metadata <- function(image_file, folder_path="", output_path="Output/") {
+  ## Create image path
+  image_ori = paste(folder_path, image_file, sep="")
+  image_cal = paste(output_path, image_file, sep="")
+  output_folder = paste("-o ", output_path,"GPS_metadata/", sep="")
+
+  # print(image_ori)
+  # print(image_cal)
+  argument = paste("-tagsfromfile", image_ori, image_cal, output_folder,sep=" ")
+  # print(argument)
+  exiftool_call(argument)
+}
+
+## Remove previous files with metadata
+do.call(file.remove, list(list.files(paste(output,"GPS_metadata/", sep=""), pattern="*.JPG", full.names=TRUE)))
+                        
+## Copy metadata from source to new thermal image
+lapply(filenames, new.copy_metadata, folder_path=input, output_path=output)
+                    
+# OP = "2_HE/"
+# lapply(filenames, new.copy_metadata, folder_path=input_path, output_path=OP)
+
+# OP = "3_NF/"
+# lapply(filenames, new.copy_metadata, folder_path=input_path, output_path=OP)
+
+# OP = "4_HE_NF/"
+# lapply(filenames, new.copy_metadata, folder_path=input_path, output_path=OP)
+```
+
+
+

@@ -1,0 +1,9 @@
+Thermimage 	- thermal package
+exifr 		- reading images meta data
+
+
+tiff
+
+Imager		- Imager is an image/video processing package for R
+		- sudo apt-get install libfftw3-dev libX11-dev libtiff-dev
+

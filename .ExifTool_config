@@ -1,0 +1,326 @@
+#------------------------------------------------------------------------------
+# File:         example.config
+#
+# Description:  Example user configuration file for Image::ExifTool
+#
+# Notes:        This example file shows how to define your own shortcuts and
+#               add new EXIF, IPTC, XMP, PNG, MIE and Composite tags, as well
+#               as how to specify preferred lenses for the LensID tag, and
+#               define new file types and default ExifTool option values.
+#
+#               Note that unknown tags may be extracted even if they aren't
+#               defined, but tags must be defined to be written.  Also note
+#               that it is possible to override an existing tag definition
+#               with a user-defined tag.
+#
+#               To activate this file, rename it to ".ExifTool_config" and
+#               place it in your home directory or the exiftool application
+#               directory.  (On Mac and some Windows systems this must be done
+#               via the command line since the GUI's may not allow filenames to
+#               begin with a dot.  Use the "rename" command in Windows or "mv"
+#               on the Mac.)  This causes ExifTool to automatically load the
+#               file when run.  Your home directory is determined by the first
+#               defined of the following environment variables:
+#
+#                   1.  EXIFTOOL_HOME
+#                   2.  HOME
+#                   3.  HOMEDRIVE + HOMEPATH
+#                   4.  (the current directory)
+#
+#               Alternatively, the -config option of the exiftool application
+#               may be used to load a specific configuration file (note that
+#               this must be the first option on the command line):
+#
+#                   exiftool -config example.config ...
+#
+#               This example file defines the following 16 new tags as well as
+#               a number of Shortcut and Composite tags:
+#
+#                   1.  EXIF:NewEXIFTag
+#                   2.  GPS:GPSPitch
+#                   3.  GPS:GPSRoll
+#                   4.  IPTC:NewIPTCTag
+#                   5.  XMP-xmp:NewXMPxmpTag
+#                   6.  XMP-exif:GPSPitch
+#                   7.  XMP-exif:GPSRoll
+#                   8.  XMP-xxx:NewXMPxxxTag1
+#                   9.  XMP-xxx:NewXMPxxxTag2
+#                  10.  XMP-xxx:NewXMPxxxTag3
+#                  11.  XMP-xxx:NewXMPxxxStruct
+#                  12.  PNG:NewPngTag1
+#                  13.  PNG:NewPngTag2
+#                  14.  PNG:NewPngTag3
+#                  15.  MIE-Meta:NewMieTag1
+#                  16.  MIE-Test:NewMieTag2
+#
+#               For detailed information on the definition of tag tables and
+#               tag information hashes, see lib/Image/ExifTool/README.
+#------------------------------------------------------------------------------
+
+# Shortcut tags are used when extracting information to simplify
+# commonly used commands.  They can be used to represent groups
+# of tags, or to provide an alias for a tag name.
+%Image::ExifTool::UserDefined::Shortcuts = (
+    MyShortcut => ['exif:createdate','exposuretime','aperture'],
+    MyAlias => 'FocalLengthIn35mmFormat',
+);
+
+# NOTE: All tag names used in the following tables are case sensitive.
+%Image::ExifTool::UserDefined = (
+    'Image::ExifTool::Exif::Main' => {
+        0xd000 => {
+            Name => 'Emissivity',
+            Writable => 'rational64s',
+        },
+
+        0xd001 => {
+            Name => 'ObjectDistance',
+            Writable => 'rational64s',
+        },
+
+        0xd002 => {
+            Name => 'ReflectedApparentTemperature',
+            Writable => 'string',
+        },
+
+        0xd003 => {
+            Name => 'AtmosphericTemperature',
+            Writable => 'string',
+        },
+
+        0xd004 => {
+            Name => 'IRWindowTemperature',
+            Writable => 'string',
+        },
+
+        0xd005 => {
+            Name => 'IRWindowTransmission',
+            Writable => 'rational64s',
+        },
+
+        0xd006 => {
+            Name => 'RelativeHumidity',
+            Writable => 'string',
+        },
+
+        0xd007 => {
+            Name => 'PlanckR1',
+            Writable => 'rational64s',
+        },
+
+        0xd008 => {
+            Name => 'PlanckB',
+            Writable => 'rational64s',
+        },
+
+        0xd009 => {
+            Name => 'PlanckF',
+            Writable => 'rational64s',
+        },
+
+        0xd010 => {
+            Name => 'AtmosphericTransAlpha1',
+            Writable => 'rational64s',
+        },
+
+        0xd011 => {
+            Name => 'AtmosphericTransAlpha2',
+            Writable => 'rational64s',
+        },
+
+        0xd012 => {
+            Name => 'AtmosphericTransBeta1',
+            Writable => 'rational64s',
+        },
+
+        0xd013 => {
+            Name => 'AtmosphericTransBeta2',
+            Writable => 'rational64s',
+        },
+
+        0xd014 => {
+            Name => 'AtmosphericTransX',
+            Writable => 'rational64s',
+        },
+
+        0xd015 => {
+            Name => 'CameraTemperatureRangeMax',
+            Writable => 'string',
+        },
+
+        0xd016 => {
+            Name => 'CameraTemperatureRangeMin',
+            Writable => 'string',
+        },
+
+#        0xd017 => {
+#            Name => 'CameraTemperatureMaxClip',
+#            Writable => 'rational64s',
+#        },
+
+#        0xd018 => {
+#            Name => 'CameraTemperatureMinClip',
+#            Writable => 'rational64s',
+#        },
+
+        0xd019 => {
+            Name => 'CameraTemperatureMaxWarn',
+            Writable => 'string',
+        },
+
+        0xd020 => {
+            Name => 'CameraTemperatureMinWarn',
+            Writable => 'string',
+        },
+
+        0xd021 => {
+            Name => 'CameraTemperatureMaxSaturated',
+            Writable => 'string',
+        },
+
+        0xd022 => {
+            Name => 'CameraTemperatureMinSaturated',
+            Writable => 'string',
+        },
+
+        0xd023 => {
+            Name => 'CameraModel',
+            Writable => 'string',
+        },
+
+        0xd024 => {
+            Name => 'CameraPartNumber',
+            Writable => 'string',
+        },
+
+        0xd025 => {
+            Name => 'CameraSerialNumber',
+            Writable => 'rational64s',
+        },
+
+        0xd026 => {
+            Name => 'CameraSoftware',
+            Writable => 'string',
+        },
+
+        0xd027 => {
+            Name => 'LensModel',
+            Writable => 'string',
+        },
+
+        0xd028 => {
+            Name => 'LensPartNumber',
+            Writable => 'string',
+        },
+
+        0xd029 => {
+            Name => 'LensSerialNumber',
+            Writable => 'string',
+        },
+
+        0xd030 => {
+            Name => 'FieldOfView',
+            Writable => 'string',
+        },
+
+        0xd031 => {
+            Name => 'FilterModel',
+            Writable => 'string',
+        },
+
+        0xd032 => {
+            Name => 'FilterPartNumber',
+            Writable => 'string',
+        },
+
+        0xd033 => {
+            Name => 'FilterSerialNumber',
+            Writable => 'string',
+        },
+
+        0xd034 => {
+            Name => 'PlanckO',
+            Writable => 'rational64s',
+        },
+
+        0xd035 => {
+            Name => 'PlanckR2',
+            Writable => 'rational64s',
+        },
+
+        0xd036 => {
+            Name => 'RawValueRangeMin',
+            Writable => 'rational64s',
+        },
+
+        0xd037 => {
+            Name => 'RawValueRangeMax',
+            Writable => 'rational64s',
+        },
+
+        0xd038 => {
+            Name => 'RawValueMedian',
+            Writable => 'rational64s',
+        },
+
+        0xd039 => {
+            Name => 'RawValueRange',
+            Writable => 'rational64s',
+        },
+
+        0xd040 => {
+            Name => 'DateTimeOriginal',
+            Writable => 'string',
+        },
+
+        0xd041 => {
+            Name => 'FocusStepCount',
+            Writable => 'rational64s',
+        },
+
+        0xd0042 => {
+            Name => 'FocusDistance',
+            Writable => 'rational64s',
+        },
+
+#        0xd043 => {
+#            Name => 'FrameRate',
+#            Writable => 'rational64s',
+#        },
+
+        0xd044 => {
+            Name => 'RawThermalImageWidth',
+            Writable => 'rational64s',
+        },
+
+        0xd045 => {
+            Name => 'RawThermalImageHeight',
+            Writable => 'rational64s',
+        },
+
+        0xd046 => {
+            Name => 'RawThermalImageType',
+            Writable => 'string',
+        },
+
+#        0xd062 => {
+#            Name => 'RawThermalImage',
+#            Writable => 'string',
+#        },
+        # add more user-defined EXIF tags here...
+    },
+
+
+);
+
+# Specify default ExifTool option values
+# (see the Options function documentation for available options)
+%Image::ExifTool::UserDefined::Options = (
+    CoordFormat => '%.6f',  # change default GPS coordinate format
+    Duplicates => 1,        # make -a default for the exiftool app
+    GeoMaxHDOP => 4,        # ignore GPS fixes with HDOP > 4
+    RequestAll => 3,        # request additional tags not normally generated
+);
+
+#------------------------------------------------------------------------------
+
