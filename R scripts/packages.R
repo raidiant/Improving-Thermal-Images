@@ -1,0 +1,6 @@
+install.packages("imager")
+install.packages("Thermimage")
+install.packages("exifr")
+install.packages("fields")
+install.packages("spatstat")
+install.packages("tiff")
