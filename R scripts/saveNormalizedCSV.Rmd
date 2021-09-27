@@ -4,7 +4,7 @@ output:
   html_document:
   df_print: paged
 ---
-  
+
 Load packages
 ```{r}
 library("Thermimage")
@@ -43,9 +43,9 @@ Read image function
 ```{r}
 # Load original thermal images, convert raw temperature values to estimates and save to output folder. Returns
 # values to retrieve the min/max temperature and the calculation of the histogram equalization.
-new.read_image <- function(image_file, 
+new.read_image <- function(image_file,
                            input_path="", output_path="Output/",
-                           NF=FALSE, 
+                           NF=FALSE,
                            sigma=0.8,
                            HE=FALSE
 ) {
@@ -54,17 +54,17 @@ new.read_image <- function(image_file,
 
   # Rotate image
   temp_image = rotate270.matrix(readflirJPG(image_path))
-  
+
   # Noise filtering with gauss filter
   if (NF == TRUE) {
     temp_image =  as.im(temp_image)
     temp_image = blur(temp_image, sigma, bleed=FALSE)
     temp_image =  as.matrix(temp_image)
   }
-  
+
   # Save temperature image
   saveRDS(temp_image, file = paste(output_path, tools::file_path_sans_ext(image_file), ".RData", sep=""))
-  
+
   # Return either min or max or every temperature value
   if (HE == TRUE) {
     temp_image
@@ -78,7 +78,7 @@ new.read_image <- function(image_file,
 
 Load images
 ```{r}
-glob_temp_range <- unlist(lapply(filenames, new.read_image, 
+glob_temp_range <- unlist(lapply(filenames, new.read_image,
                                  input_path=input,
                                  output_path=output,
                                  NF=NF,
@@ -108,21 +108,21 @@ if (HE == TRUE) {
 Normalize images (convert temperature values to gray values)
 ```{r}
 new.normalize <- function(image_file, output_path="4_HE_NF/",
-                          min, max, 
+                          min, max,
                           HE=FALSE, f_ecdf=NULL) {
   ## Create image path
   image_path = paste(output_path, tools::file_path_sans_ext(image_file), ".RData", sep="")
   temp_image <- readRDS(image_path)
   ## Delete .Rdata file
   unlink(image_path)
-  
+
   temp_image <- mirror.matrix(temp_image)
   print(temp_image)
-  
+
   ## Normalize data/apply histogram equalization
   if (HE == TRUE) {
     equalized <- f_ecdf(temp_image)
-    #equalized <- as.cimg(equalized, dim=dim(temp_image)) 
+    #equalized <- as.cimg(equalized, dim=dim(temp_image))
     #plot(equalized, rescale=FALSE, main=paste("Histogram equalized", image_file))
     #save.image(equalized, file=paste(output_path, image_file, sep=""), quality = 1)
     #print(equalized)
@@ -132,7 +132,7 @@ new.normalize <- function(image_file, output_path="4_HE_NF/",
   } else {
     temp_image <- (temp_image - min) / (max - min)
     # hist(x=temp_image, main=paste("Histogram of normalized values", image_path), xlab='normalized value')
-    
+
     ## Plot and save temperature image
     temp_image = as.cimg(temp_image, dim=dim(temp_image))
     save.image(temp_image, file=paste(output_path, image_file, sep=""), quality = 1)
@@ -143,9 +143,9 @@ new.normalize <- function(image_file, output_path="4_HE_NF/",
 
 Plot normalized images
 ```{r}
-temp = lapply(filenames, new.normalize, 
-              output_path=output, 
-              min=min_temp, max=max_temp, 
-              HE=HE, 
+temp = lapply(filenames, new.normalize,
+              output_path=output,
+              min=min_temp, max=max_temp,
+              HE=HE,
               f_ecdf=f)
 ```

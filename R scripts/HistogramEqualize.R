@@ -8,128 +8,82 @@ library("exifr")
 
 # Set configurations
 
-# Noise filering
-NF = FALSE
-# Histogram Equalization
-HE = TRUE
-
-# INPUT_PATH_FOLDER
+# Input path folder
 input = "Data/"
-# OUTPUT_PATH_FOLDER
-output = "2_HE/"
-dir.create(file.path(output), showWarnings = FALSE)
+# Output path folder
+output = "Output/"
 
-# Gassian sigma value for noise filtering
-sigma = 0.8
+# Create our output directory
+dir.create(file.path(output), showWarnings = FALSE)
 
 # Load path images from directory
 filenames <- list.files(input, pattern="*.JPG", full.names=FALSE)
-filenames
 
-# Read image function
-
-# Load original thermal images, convert raw temperature values to estimates and save to output folder. Returns
-# values to retrieve the min/max temperature and the calculation of the histogram equalization.
+# Read image function: load original thermograms in and store the sensor values
+# for later use.
 new.read_image <- function(image_file,
-                           input_path="", output_path="Output/",
-                           NF=FALSE,
-                           sigma=0.8,
-                           HE=FALSE
-) {
-  # Create image path
-  image_path = paste(input_path, image_file, sep="")
+                           input_path="",
+                           output_path="Output/")
+{
+    # Create image path
+    image_path = paste(input_path, image_file, sep="")
 
-  # Rotate image
-  temp_image = rotate270.matrix(readflirJPG(image_path))
+    # Rotate image
+    sensor_values = rotate270.matrix(readflirJPG(image_path))
 
-  # Noise filtering with gauss filter
-  if (NF == TRUE) {
-    temp_image =  as.im(temp_image)
-    temp_image = blur(temp_image, sigma, bleed=FALSE)
-    temp_image =  as.matrix(temp_image)
-  }
+    # Save our sensor values
+    saveRDS(sensor_values, file = paste(output_path, tools::file_path_sans_ext(image_file), ".RData", sep=""))
 
-  # Save temperature image
-  saveRDS(temp_image, file = paste(output_path, tools::file_path_sans_ext(image_file), ".RData", sep=""))
-
-  # Return either min or max or every temperature value
-  if (HE == TRUE) {
-    temp_image
-  } else {
-    min <- min(temp_image)
-    max <- max(temp_image)
-    values <- c(min, max)
-  }
+    # Return the sensor values
+    sensor_values
 }
 
-# Load images
-
-glob_temp_range <- unlist(lapply(filenames, new.read_image,
+# Load sensor values
+glob_sensorvalues_range <- unlist(lapply(filenames, new.read_image,
                                  input_path=input,
-                                 output_path=output,
-                                 NF=NF,
-                                 sigma=sigma,
-                                 HE=HE))
+                                 output_path=output))
 
 # Calculate global min and max values
-
-min_temp <- min(glob_temp_range)
-max_temp <- max(glob_temp_range)
+min_temp <- min(glob_sensorvalues_range)
+max_temp <- max(glob_sensorvalues_range)
 print(min_temp)
 print(max_temp)
 
 
 # Calculate ECDF for histogram equalization
-
-if (HE == TRUE) {
-  f <- ecdf(glob_temp_range)
-  hist(glob_temp_range, main=paste("Global Histogram"))
-  hist(f(glob_temp_range), main=paste("Global Equalized Histogram"))
-} else {
-  f <- NULL
-}
+f <- ecdf(glob_sensorvalues_range)
 
 
 # Normalize images (convert temperature values to gray values)
+new.normalize <- function(image_file,
+                          output_path="Output/",
+                          min,
+                          max,
+                          f_ecdf=NULL)
+{
+    ## Create image path
+    image_path = paste(output_path, tools::file_path_sans_ext(image_file), ".RData", sep="")
+    temp_image <- readRDS(image_path)
+    ## Delete .Rdata file
+    unlink(image_path)
 
-new.normalize <- function(image_file, output_path="4_HE_NF/",
-                          min, max,
-                          HE=FALSE, f_ecdf=NULL) {
-  ## Create image path
-  image_path = paste(output_path, tools::file_path_sans_ext(image_file), ".RData", sep="")
-  temp_image <- readRDS(image_path)
-  ## Delete .Rdata file
-  unlink(image_path)
+    temp_image <- mirror.matrix(temp_image)
 
-  temp_image <- mirror.matrix(temp_image)
-  print(temp_image)
-
-  ## Normalize data/apply histogram equalization
-  if (HE == TRUE) {
+    # Histogram equalize our sensor values
     equalized <- f_ecdf(temp_image)
-    # equalized <- as.cimg(equalized, dim=dim(temp_image))
-    # plot(equalized, rescale=FALSE, main=paste("Histogram equalized", image_file))
-    # save.image(equalized, file=paste(output_path, image_file, sep=""), quality = 1)
-    # print(equalized)
-    equalized <- round((equalized * (max - min)) + min)
-    print(equalized)
-    write.csv2(equalized, file=paste(output_path, tools::file_path_sans_ext(image_file), "_he.csv", sep = ""), row.names = FALSE)
-  } else {
-    temp_image <- (temp_image - min) / (max - min)
-    # hist(x=temp_image, main=paste("Histogram of normalized values", image_path), xlab='normalized value')
 
-    ## Plot and save temperature image
-    temp_image = as.cimg(temp_image, dim=dim(temp_image))
-    save.image(temp_image, file=paste(output_path, image_file, sep=""), quality = 1)
-    plot(temp_image, rescale=FALSE)
-  }
+    # Store normalized image
+    img <- as.cimg(equalized, dim=dim(temp_image))
+    save.image(img, file=paste(output_path, tools::file_path_sans_ext(image_file), "_he.JPG", sep=""), quality = 1)
+
+    # Round off decimal values and write to CSV
+    equalized <- round((equalized * (max - min)) + min)
+    write.csv2(equalized, file=paste(output_path, tools::file_path_sans_ext(image_file), "_he.csv", sep = ""), row.names = FALSE)
 }
 
 
 # Plot normalized images
-
 temp = lapply(filenames, new.normalize,
               output_path=output,
               min=min_temp, max=max_temp,
-              HE=HE,
               f_ecdf=f)
