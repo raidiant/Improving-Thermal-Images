@@ -1,5 +1,12 @@
 #!/bin/bash
 
+BINDIR=build/bin
+
+if [[ ! -f $BINDIR/copyJPG || ! -f $BINDIR/replaceRadioMetadata ]]; then
+    echo "Binaries for copyJPG and replaceRadioMetadata are not present in $BINDIR"
+    exit 1
+fi
+
 # copy metadata from original images to normalised images
 # for file in *_R.JPG ; do
 #     exiftool -tagsFromFile $file ${file/_R/_R_he}
@@ -14,10 +21,10 @@ for file in *_R.JPG ; do
     echo "Copying JPEG data from $norm_img to $file"
 
     # copy JPG portion of normalised image to original
-    ./copyJPG $norm_img $file
+    $BINDIR/copyJPG $norm_img $file
 
     echo "Replacing radiometric data in $file with data in $norm_csv"
 
     # replace radiometric data
-    ./replaceRadioMetadata $file $norm_csv
+    $BINDIR/replaceRadioMetadata $file $norm_csv
 done
