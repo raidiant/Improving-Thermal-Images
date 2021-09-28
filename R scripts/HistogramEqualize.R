@@ -4,14 +4,42 @@ library("fields")
 library("imager")
 library("spatstat")
 library("exifr")
+library("parallel")
 
 
 # Set configurations
+args = commandArgs(trailingOnly=TRUE)
 
-# Input path folder
-input = "Data/"
-# Output path folder
-output = "Output/"
+# Store our number of arguments here
+arglength <- length(args)
+
+# Set our input and output folders depending on supplied command line arguments
+if (arglength == 0) {
+    # Input path folder
+    input = "Data/"
+    # Output path folder
+    output = "Output/"
+} else if (arglength == 1) {
+    input = args[1]
+    output = "Output/"
+} else {
+    input = args[1]
+    output = args[2]
+}
+
+lastChar <- function(string) {
+    strlen <- nchar(string)
+    substr(string, strlen, strlen)
+}
+
+# Make sure our output folders have a forward slash suffixed
+if (lastChar(input) != '/') {
+    input <- paste(input, '/', sep="")
+}
+if (lastChar(output) != '/') {
+    output <- paste(output, '/', sep="")
+}
+
 
 # Create our output directory
 dir.create(file.path(output), showWarnings = FALSE)
@@ -83,7 +111,7 @@ new.normalize <- function(image_file,
 
 
 # Plot normalized images
-temp = lapply(filenames, new.normalize,
+temp = mclapply(filenames, new.normalize,
               output_path=output,
               min=min_temp, max=max_temp,
               f_ecdf=f)
