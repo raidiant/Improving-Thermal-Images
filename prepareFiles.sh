@@ -22,10 +22,13 @@ if [[ -z $OUTDIR ]]; then
     OUTDIR=Out
 fi
 
-# copy metadata from original images to normalised images
-# for file in *_R.JPG ; do
-#     exiftool -tagsFromFile $file ${file/_R/_R_he}
-# done
+if [[ ! -d $OUTDIR ]]; then
+    mkdir $OUTDIR
+fi
+
+# Run our normalization step to output to images and CSV
+echo "Normalizing thermograms and outputting to new images and CSV"
+R --no-save < R\ scripts/HistogramEqualize.R
 
 # JPG transfer and radiometrica data replacement
 for file in *_R.JPG ; do
@@ -43,3 +46,5 @@ for file in *_R.JPG ; do
     # replace radiometric data
     $BINDIR/replaceRadioMetadata $file $norm_csv
 done
+
+echo "Processing finished. Files are stored in $OUTDIR"
