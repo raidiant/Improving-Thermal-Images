@@ -1,10 +1,25 @@
 #!/bin/bash
 
 BINDIR=build/bin
+DATADIR=$1
+OUTDIR=$2
+
+if [[ -z $1 ]];then
+    echo "Usage: ./prepareFiles.sh <data directory> <optional: out directory>"
+fi
 
 if [[ ! -f $BINDIR/copyJPG || ! -f $BINDIR/replaceRadioMetadata ]]; then
     echo "Binaries for copyJPG and replaceRadioMetadata are not present in $BINDIR"
     exit 1
+fi
+
+if [[ ! -d $DATADIR ]]; then
+    echo "Given data directory is not present"
+    exit 1
+fi
+
+if [[ -z $OUTDIR ]]; then
+    OUTDIR=Out
 fi
 
 # copy metadata from original images to normalised images
